@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  dianping-frontend:
+    image: nginx:1.18
+    ports:
+      - "8080:8080"
+    volumes:
+      - { 绝对路径 }\conf\nginx.conf:/etc/nginx/nginx.conf
+      - {绝对路径}\conf:/etc/nginx/conf.d
+      - {绝对路径}\html:/usr/share/nginx/html
+    restart: always
