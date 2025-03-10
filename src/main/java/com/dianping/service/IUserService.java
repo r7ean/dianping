@@ -1,7 +1,10 @@
 package com.dianping.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.dianping.dto.Result;
 import com.dianping.entity.User;
+
+import javax.servlet.http.HttpSession;
 
 /**
  * <p>
@@ -13,4 +16,11 @@ import com.dianping.entity.User;
  */
 public interface IUserService extends IService<User> {
 
+    /**
+     * 发送手机验证码
+     * @param phone 手机号
+     * @param session
+     * @return
+     */
+    Result sendCode(String phone, HttpSession session);
 }
