@@ -3,7 +3,9 @@ package com.dianping.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.lang.UUID;
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.dianping.dto.LoginFormDTO;
 import com.dianping.dto.Result;
@@ -116,6 +118,31 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         // 5.4 设置登录有效期
         stringRedisTemplate.expire(tokenKey, LOGIN_USER_TTL, TimeUnit.SECONDS);
         return Result.ok(token);
+    }
+
+    @Override
+    public Result logout(HttpServletRequest request) {
+        // 1. 先获取登录用户的token
+        String token = request.getHeader("authorization");
+        String tokenKey = LOGIN_USER_KEY + token;
+        // 2. 如果本地登录之后 redis未过期且浏览器token未过期 则删除token和redis信息
+        // 2.1 清除token信息
+        if(StrUtil.isNotBlank(token)){
+            token = "";
+        }
+        // 2.2 清除redis缓存
+        Boolean hasKey = stringRedisTemplate.hasKey(tokenKey);
+        if(BooleanUtil.isTrue(hasKey)){
+            stringRedisTemplate.delete(tokenKey);
+        }
+        return Result.ok(token);
+    }
+
+    @Override
+    public Result getUserById(Integer id) {
+        User user = getById(id);
+        UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+        return Result.ok(userDTO);
     }
 
 
