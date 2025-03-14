@@ -8,6 +8,7 @@ import com.dianping.service.ISeckillVoucherService;
 import com.dianping.service.IVoucherOrderService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.dianping.utils.RedisIdGenerator;
+import com.dianping.utils.SimpleRedisLock;
 import com.dianping.utils.UserHolder;
 import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
@@ -76,10 +77,17 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         }
         
         Long userId = UserHolder.getUser().getId();
-        synchronized (userId.toString().intern()) {
-             proxy = (IVoucherOrderService) AopContext.currentProxy();
+        SimpleRedisLock lock = new SimpleRedisLock(stringRedisTemplate, "order:" + userId);
+        Boolean success = lock.tryLock(600L);
+        if (!success) {
+            seckillVoucher(voucherId);
+        }
+        try {
+            proxy = (IVoucherOrderService) AopContext.currentProxy();
             //返回订单id
             return proxy.createVoucherOrder(voucherId, userId);
+        }finally {
+            lock.unLock();
         }
     }
 
@@ -108,6 +116,5 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         voucherOrder.setUserId(UserHolder.getUser().getId());
         save(voucherOrder);
         return Result.ok(OrderId);
-
     }
 }
