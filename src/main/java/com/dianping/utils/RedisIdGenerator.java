@@ -24,7 +24,7 @@ public class RedisIdGenerator {
      * @param keyPrefix
      * @return
      */
-    public long nextId(String keyPrefix){
+    public Long nextId(String keyPrefix){
         // 1. 生成时间戳
         LocalDateTime now = LocalDateTime.now();
         long timeStamp = now.toEpochSecond(ZoneOffset.UTC) - BEGIN_TIMESTAMP;
