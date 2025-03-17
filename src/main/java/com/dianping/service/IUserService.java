@@ -38,4 +38,8 @@ public interface IUserService extends IService<User> {
     Result logout(HttpServletRequest request);
 
     Result getUserById(Integer id);
+
+    Result sign();
+
+    Result signCount();
 }
