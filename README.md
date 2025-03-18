@@ -41,7 +41,7 @@
 
 前端项目文件位置: `./src/resources/dianping-frontend`
 
-ngninx 配置文件: `./src/resources/dianping-frontend/conf/nginx.conf` 
+nginx 配置文件: `./src/resources/dianping-frontend/conf/nginx.conf` 
 
 运行前端项目: 双击运行 `nginx.exe` 文件
 
@@ -90,7 +90,7 @@ logging:
 
 ### 测试秒杀优惠券功能
 
-使用 postman 调用`http://localhost:8081/voucher/seckill` 接口, 设置requst body为
+使用 postman 调用`http://localhost:8081/voucher/seckill` 接口, 设置request body为
 
 ```json
     {
