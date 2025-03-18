@@ -1,110 +1,125 @@
-# Dianping Project
+# 面试重点
 
-本项目使用SpringBoot框架进行开发的前后端分离项目，使用了redis、tomcat、MySQL等相关技术。类似于大众点评，实现了短信登录、商户查询缓存、优惠卷秒杀、附近的商户、UV统计、用户签到、好友关注、达人探店 八个部分形成了闭环。其中重点使用了分布式锁实现了一人一单功能、项目中大量使用了Redis 的知识。
+## 使用技术
 
-[TOC]
+SpringBoot+nginx+MySql+Lombok+MyBatis-Plus+Hutool+Redis
 
-## 准备工作
+使用 Redis 解决了在集群模式下的 Session共享问题,使用拦截器实现用户的登录校验和权限刷新
 
-### 持久层数据库准备
+基于Cache Aside模式解决数据库与缓存的一致性问题
 
-#### 在 本机/虚拟机/Docker 中启动MySQL服务
+使用 Redis 对高频访问的信息进行缓存，降低了数据库查询的压力,解决了缓存穿透、雪崩、击穿问题使用 Redis + Lua脚
 
-创建相关数据库
+本实现对用户秒杀资格的预检，同时用乐观锁解决秒杀产生的超卖问题
 
-`CREATE DATABASE dianping;`  
+使用Redis分布式锁解决了在集群模式下一人一单的线程安全问题
 
-导入数据库，将`./src/resources/db/dianping.sql` 导入到创建好的数据库中
-   
-   ```
-   tb_user: 用户表
-   tb_user_info: 用户详情表
-   tb_shop: 商户信息表
-   tb_shop_type: 商户类型表
-   tb_blog: 用户博客表
-   tb_fellow: 用户关注表
-   tb_voucher: 优惠券表
-   tb_voucher_order: 购买优惠券订单表
-   ```
-   
-#### 在 本机/虚拟机/Docker 启动redis服务
+基于stream结构作为消息队列,实现异步秒杀下单
 
-指定 redis 端口号为 6379， 本项目未设置 redis 密码。
+使用Redis的 ZSet 数据结构实现了点赞排行榜功能,使用Set 集合实现关注、共同关注功能
 
-创建项目中需要的 Stream 类型的消息队列, 名为 `streams.order`  
+## 项目难点/亮点
 
-> XGROUP CREATE streams.orders consumerGroup 0 MKSTREAM
+### 使用Redis解决了在集群模式下的Session共享问题，使用拦截器实现了用户的登录校验和权限刷新
 
-提前将商户GEO数据导入Redis中, 以免项目启动后无法查询到商户信息, 运行 `.src/test/java/com/dianping/utils/ImportShopGeoToRedis.java` 文件
+❓**为什么用Redis替代Session？**  
 
-### 前端部署
+✅使用Session时，根据客户端发送的session-id获取Session，再从Session获取数据，由于Session共享问题：多台Tomct并不共享session存储空间，当请求切换到不同tomcat服务时导致数据丢失的问题。  
 
-前端项目文件位置: `./src/resources/dianping-frontend`
+解决方法：用Redis代替Session存储User信息，注册用户时，使用UUID生成随机的Token作为Key值存放用户到Redis中。
 
-ngninx 配置文件: `./src/resources/dianping-frontend/conf/nginx.conf` 
+❓**还有其他解决方法吗？**  
+ 
+✅基于 Cookie 的 Token 机制，不再使用服务器端保存 Session，而是通过客户端保存 Token（如 JWT）。Token 包含用户的认证信息（如用户 ID、权限等），并通过签名验证其完整性和真实性。每次请求，客户端将 Token 放在 Cookie 或 HTTP 头中发送到服务
 
-运行前端项目: 双击运行 `nginx.exe` 文件
+❓**登录流程**  
 
-### 项目配置  
+![image](https://github.com/user-attachments/assets/d869adcc-37fe-433c-b206-f90290f6eb36)
 
-#### 配置 `application.yaml` 
 
-```yaml
-server:
-  port: 8081 # 指定端口号为8081, nginx.conf中代理的也是这个端口, 如果更改也需要更改nginx.conf中的配置
-  shutdown: graceful
-spring:
-  lifecycle:
-    timeout-per-shutdown-phase: 2s # 退出spring时 等待关闭资源时间
-  application:
-    name: dianping
-  datasource:
-    driver-class-name: com.mysql.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3307/dianping?useSSL=false&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true # 配置数据库连接 url, 我这里使用的端口号是 3307
-    username: { username }
-    password: { password }
-  redis:
-    host: 127.0.0.1
-    port: 6379
-    lettuce:
-      pool:
-        max-active: 10
-        max-idle: 10
-        min-idle: 1
-        time-between-eviction-runs: 10s
-    database: 2 # 使用redis哪个仓库 {0 .. 15}
-  jackson:
-    default-property-inclusion: non_null # JSON处理时忽略非空字段
-mybatis-plus:
-  type-aliases-package: com.dianping.entity # 别名扫描包
-logging:
-  level:
-    com.dianping: debug
-```
+❓**怎么使用拦截器实现这些功能？**  
 
-## 🚀项目启动
+![image](https://github.com/user-attachments/assets/759a3edb-0305-4c49-90f2-d986ed0f5040)
 
-运行 `./src/java/com/dianping/DianpingApplication.java`, 项目运行在8081端口 
+系统中设置了两层拦截器：
 
-使用浏览器访问 [🎈dianping-frontend](http://localhost:8080/)
+第一层拦截器是做全局处理，例如获取Token，查询Redis中的用户信息，刷新Token有效期等通用操作。
 
-### 测试秒杀优惠券功能
+第二层拦截器专注于验证用户登录的逻辑，如果路径需要登录，但用户未登录，则直接拦截请求。
 
-使用 postman 调用`http://localhost:8081/voucher/seckill` 接口, 设置requst body为
+使用拦截器是因为，多个线程都需要获取用户，在想要方法之前统一做些操作，就需要用拦截器，还可以拦截没用登录的用户，但只有一层拦截器不是拦截所有请求，所有有些请求不会刷新Token时间，我们就需要再加一层拦截器，拦截所有请求，做到一直刷新。
 
-```json
-    {
-      "shopId":1,
-      "title":"100元代金券",
-      "subTitle":"周一至周五可用",
-      "rules":"全场通用\\n无需预约\\n不可叠加\\不兑现、不找零\\n仅限堂食",
-      "payValue":7900,
-      "actualValue":10000,
-      "type":1,
-      "stock":100,
-      "benginTime": "2025-03-15T20:00:00",
-      "endTime": "2025-04-01T20:00:00"
-    }
-```
+好处：
 
-账号登录, 进入相关商户, 点击抢购优惠券
+职责分离：这种分层设计让每个拦截器的职责更加单一，代码更加清晰、易于维护
+
+提升性能：如果直接在第一层拦截器处理登录验证，可能会对每个请求都进行不必要的检查。而第二层拦截器仅在“需要登录的路径”中生效，可以避免不必要的性能开销。
+
+灵活性：这种机制方便扩展，不需要修改第一层的全局逻辑。
+
+复用 ThreadLocal 数据：第一层拦截器已经将用户信息保存到 ThreadLocal 中，第二层拦截器可以直接使用这些数据，而不需要重复查询 Redis 或其他数据源。
+
+### 基于Cache Aside模式解决数据库与缓存的一致性问题
+
+❓**怎么保证缓存更新策略的高一致性需求？**
+
+✅ 使用redission实现的读写锁，读时使用共享锁，保证读读不互斥、读写互斥、写写互斥。写时使用排他锁，保证读写互斥、读读互斥。保证写数据时不会脏数据。
+
+### 使用 Redis 对高频访问的信息进行缓存，降低了数据库查询的压力,解决了缓存穿透、雪崩、击穿问题
+
+❓**什么是缓存穿透，怎么解决？**
+
+✅ 缓存穿透是用户请求数据在缓存中不存在或者用户恶意使用不存在的数据向服务器发起请求，大量并发访问数据库不存在的数据时，这个现象叫做缓存穿透。 缓存穿透可能导致数据库压力过大，最终导致数据库宕机等情况。  
+
+解决方式：  
+
+1️⃣ 增加对请求的校验机制，例如校验请求参数类型。
+
+2️⃣ 使用布隆过滤器，为了避免缓存穿透，将要查询的数据提前存入布隆过滤器。新增数据时也将新增数据存入过滤器。如果在查询时使用过滤器中不存在的数据时，可以直接返回。
+
+3️⃣ 使用空值或特殊值缓存，当请求数据在缓存中不存在时，仍然会查询数据库，如果数据库也不存在时，将会写入一个空值或者特殊值到缓存中(设置过期时间)。
+
+❓**什么是缓存雪崩，怎么解决？**
+
+✅ 缓存雪崩是缓存中大量key失效，如果高并发来临时导致大量请求直接到数据库，导致数据库宕机等情况。
+
+解决方式：  
+
+1️⃣ 使用同步锁控制查询数据库的线程，一次只允许一个线程查询，这种方法效率较低。
+
+2️⃣ 对同一类型的key设置不同的过期时间。
+
+3️⃣ 使用缓存预热，提前将数据存入缓存，通常使用专门的后台程序将数据库数据存入缓存。
+
+❓**什么是缓存击穿，怎么解决？**
+
+✅ 缓存击穿是热点key问题，大量并发请求到一个热点key，当热点key失效时，大量请求到数据库，导致数据库资源耗尽，从而数据库宕机的情况。
+
+解决方式：  
+
+1️⃣ 使用互斥锁解决。优点是内存占用小，高一致性，实现简单。缺点是性能较低，可能会出现死锁。通过Redis中setnx指令实现互斥锁，只有当值不存在时才可以写入成功。线程获取锁后，需要查询缓存才能保证缓存不被击穿。
+
+2️⃣ 缓存数据使用逻辑过期。优点是性能高。缺点是内存占用较大，会出现脏读。使用逻辑过期需要将数据预热，提前将数据写入缓存。当缓存真的过期时，开启一个子线程重建缓存，主线程的请求依旧返回旧数据，不会被阻塞，但是会出现脏读。
+
+### 使用 Redis + Lua脚本实现对用户秒杀资格的预检，同时用乐观锁解决秒杀产生的超卖问题
+
+❓**什么是超卖问题，怎么解决？**
+
+✅ 超卖问题是当有多个线程对数据库库存进行查询后，但是为进行更新时，导致错误扣减库存的情况。
+
+解决方式：  
+
+1️⃣ 使用悲观锁，让线程串行执行。优点：简单安全。缺点：性能较低。
+
+2️⃣ 使用乐观锁，使用CAS自旋思想，当更新库存时，与之前查询的结果进行比较，如果不相同则自旋。
+
+### 使用Redis分布式锁解决了在集群模式下一人一单的线程安全问题
+
+❓**Redis分布式锁实现思路？**
+
+✅ 使用Redission分布式锁，实现可重入，可重试。可重入是同一线程可以再次获取锁，避免死锁。可重试是Redission手动加锁，控制锁的失效时间和等待时间，当获取锁线程未完成业务时，Redission引入了Watch Dog机制。每隔一段时间检查当前业务是否还是持有锁，如果继续持有就增加锁的时间，当业务完成后释放锁。
+
+![image](https://github.com/user-attachments/assets/b2d0f495-aa04-4d7a-8252-5e8d713134af)
+
+
+来自 [🎁CSDN-黑马点评完整代码+简历编写+面试重点](https://blog.csdn.net/KNeeg_/article/details/146123658)
