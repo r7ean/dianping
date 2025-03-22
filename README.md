@@ -2,19 +2,19 @@
 
 本项目使用SpringBoot框架进行开发的前后端分离项目，使用了redis、tomcat、MySQL等相关技术。类似于大众点评，实现了短信登录、商户查询缓存、优惠卷秒杀、附近的商户、UV统计、用户签到、好友关注、达人探店 八个部分形成了闭环。其中重点使用了分布式锁实现了一人一单功能、项目中大量使用了Redis 的知识。
 
-[TOC]
 
 ## 准备工作
 
 ### 持久层数据库准备
 
-#### 在 本机/虚拟机/Docker 中启动MySQL服务
+#### 在 `本机/虚拟机/Docker` 中启动MySQL服务
 
-创建相关数据库
+- 创建相关数据库
 
-`CREATE DATABASE dianping;`  
+    `CREATE DATABASE dianping;`    
 
-导入数据库，将`./src/resources/db/dianping.sql` 导入到创建好的数据库中
+
+- 导入数据库，将`./src/resources/db/dianping.sql` 导入到创建好的数据库中
    
    ```
    tb_user: 用户表
@@ -29,23 +29,29 @@
    
 #### 在 本机/虚拟机/Docker 启动redis服务
 
-指定 redis 端口号为 6379， 本项目未设置 redis 密码。
+- 指定 redis 端口号为 6379， 本项目未设置 redis 密码。  
 
-创建项目中需要的 Stream 类型的消息队列, 名为 `streams.order`  
 
-> XGROUP CREATE streams.orders consumerGroup 0 MKSTREAM
+- 创建项目中需要的 Stream 类型的消息队列, 名为 `streams.order`  
 
-提前将商户GEO数据导入Redis中, 以免项目启动后无法查询到商户信息, 运行 `.src/test/java/com/dianping/utils/ImportShopGeoToRedis.java` 文件
+    > XGROUP CREATE streams.orders consumerGroup 0 MKSTREAM
+
+- 提前将商户GEO数据导入Redis中, 以免项目启动后无法查询到商户信息   
+
+    > .src/test/java/com/dianping/utils/ImportShopGeoToRedis.java
 
 ### 前端部署
 
-前端项目文件位置: `./src/resources/dianping-frontend`
+- 前端项目文件位置: `./src/resources/dianping-frontend`  
 
-nginx 配置文件: `./src/resources/dianping-frontend/conf/nginx.conf` 
 
-运行前端项目: 双击运行 `nginx.exe` 文件
+- nginx 配置文件: `./src/resources/dianping-frontend/conf/nginx.conf`   
 
-### 项目配置  
+
+- 运行前端项目: 双击运行 `nginx.exe` 文件  
+
+
+### 项目配置   
 
 #### 配置 `application.yaml` 
 
@@ -88,9 +94,14 @@ logging:
 
 使用浏览器访问 [🎈dianping-frontend](http://localhost:8080/)
 
-### 测试秒杀优惠券功能
+### 使用OpenAPI文档测试接口
 
-使用 postman 调用`http://localhost:8081/voucher/seckill` 接口, 设置request body为
+打开 openAPI 文档: [http://127.0.0.1:8081/doc.html](http://127.0.0.1:8081/doc.html)   
+
+> 请根据自己项目修改主机名和端口号
+
+
+秒杀优惠券请求模板:  
 
 ```json
     {

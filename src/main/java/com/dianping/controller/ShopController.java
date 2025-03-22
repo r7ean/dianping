@@ -7,6 +7,8 @@ import com.dianping.dto.Result;
 import com.dianping.entity.Shop;
 import com.dianping.service.IShopService;
 import com.dianping.utils.SystemConstants;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -21,6 +23,7 @@ import javax.annotation.Resource;
  */
 @RestController
 @RequestMapping("/shop")
+@Tag(name = "商户管理", description = "查询商户、新增商户、更新商户、根据商铺类型分页查询商铺信息、根据商铺名称关键字分页查询商铺信息")
 public class ShopController {
 
     @Resource
@@ -32,6 +35,7 @@ public class ShopController {
      * @return 商铺详情数据
      */
     @GetMapping("/{id}")
+    @Operation(summary = "根据id查询商铺信息")
     public Result queryShopById(@PathVariable("id") Long id) {
         return shopService.queryById(id);
     }
@@ -42,6 +46,7 @@ public class ShopController {
      * @return 商铺id
      */
     @PostMapping
+    @Operation(summary = "新增商铺信息, 暂未实现有BUG")
     public Result saveShop(@RequestBody Shop shop) {
         // 写入数据库
         shopService.save(shop);
@@ -55,6 +60,7 @@ public class ShopController {
      * @return 无
      */
     @PutMapping
+    @Operation(summary = "更新商铺信息, 暂未实现有BUG")
     public Result updateShop(@RequestBody Shop shop) {
         return shopService.updateShop(shop);
     }
@@ -66,6 +72,7 @@ public class ShopController {
      * @return 商铺列表
      */
     @GetMapping("/of/type")
+    @Operation(summary = "根据商铺类型分页查询商铺信息")
     public Result queryShopByType(
             @RequestParam("typeId") Integer typeId,
             @RequestParam(value = "current", defaultValue = "1") Integer current,
@@ -83,6 +90,7 @@ public class ShopController {
      * @return 商铺列表
      */
     @GetMapping("/of/name")
+    @Operation(summary = "根据商铺名称关键字分页查询商铺信息")
     public Result queryShopByName(
             @RequestParam(value = "name", required = false) String name,
             @RequestParam(value = "current", defaultValue = "1") Integer current

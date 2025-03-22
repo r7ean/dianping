@@ -9,6 +9,8 @@ import com.dianping.service.IUserInfoService;
 import com.dianping.service.IUserService;
 import com.dianping.utils.RegexUtils;
 import com.dianping.utils.UserHolder;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +29,7 @@ import javax.servlet.http.HttpSession;
 @Slf4j
 @RestController
 @RequestMapping("/user")
+@Tag(name = "用户管理", description = "发送验证码、登录、登出、用户信息、签到等功能")
 public class UserController {
 
     @Resource
@@ -39,6 +42,7 @@ public class UserController {
      * 发送手机验证码
      */
     @PostMapping("code")
+    @Operation(summary = "发送验证码")
     public Result sendCode(@RequestParam("phone") String phone, HttpSession session) {
         return userService.sendCode(phone, session);
     }
@@ -48,6 +52,7 @@ public class UserController {
      * @param loginForm 登录参数，包含手机号、验证码；或者手机号、密码
      */
     @PostMapping("/login")
+    @Operation(summary = "用户登录")
     public Result login(@RequestBody LoginFormDTO loginForm, HttpServletRequest request){
         return userService.login(loginForm, request);
     }
@@ -57,20 +62,24 @@ public class UserController {
      * @return 无
      */
     @PostMapping("/logout")
+    @Operation(summary = "用户登出")
     public Result logout(HttpServletRequest request){
         return userService.logout(request);
     }
 
     @GetMapping("/me")
+    @Operation(summary = "查询登录用户信息")
     public Result me(){
         UserDTO user = UserHolder.getUser();
         return Result.ok(user);
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "查询用户信息")
     public Result getUserById(@PathVariable("id") Integer id){
         return userService.getUserById(id);
     }
+    
     @GetMapping("/info/{id}")
     public Result info(@PathVariable("id") Long userId){
         // 查询详情
@@ -90,6 +99,7 @@ public class UserController {
      * @return
      */
     @PostMapping("/sign")
+    @Operation(summary = "用户签到")
     public Result sign(){
         return userService.sign();
     }
@@ -99,6 +109,7 @@ public class UserController {
      * @return
      */
     @GetMapping("/sign/count")
+    @Operation(summary = "统计用户签到次数")
     public Result signCount(){
         return userService.signCount();
     }

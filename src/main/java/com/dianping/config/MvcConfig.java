@@ -23,7 +23,12 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/shop-type/**",
                         "/blog/hot",
                         "/voucher/**",
-                        "/upload/**"
+                        "/upload/**",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/swagger-resources/**",
+                        "/webjars/**",
+                        "/doc.html/**"
                 ).order(1);
         registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate)).order(0);
     }
